@@ -1,0 +1,82 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Programmer: AH
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+#SYMBOL_NAME "Basic Clock Serial w AMPM"
+#HINT "Time string HH:MM xM"
+// #DEFINE_CONSTANT
+#CATEGORY "16" // Time/Date 
+// #PRINT_TO_TRACE
+// #DIGITAL_EXPAND 
+// #ANALOG_SERIAL_EXPAND 
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+
+#HELP_BEGIN
+   Spits out a string with the current time in the format HH:MM xM every 10 seconds
+#HELP_END
+
+
+STRING_OUTPUT ClockString;
+ 
+STRING_FUNCTION GetAmPm()
+{
+	INTEGER hour;
+    hour = GetHourNum();
+
+    if(hour < 12)
+	{
+		return ("AM");
+	}
+	else
+	{
+     	return ("PM");
+	}	
+}
+
+INTEGER_FUNCTION Get12HourNum()
+{
+	INTEGER temp;
+	temp = GetHourNum();
+
+	if(temp >= 12)
+	{
+		temp = temp - 12;
+	}
+
+	if(temp = 0)
+	{
+     	temp = 12;
+	}
+	
+	return(temp);
+}
+
+Function Main()
+{
+    WaitForInitializationComplete();
+
+	while(1)
+	{
+		wait(1000)
+		{
+			makestring(ClockString,"%u:%02u %s", Get12HourNum(), GetMinutesNum(), GetAmPm());
+		}
+	}
+}

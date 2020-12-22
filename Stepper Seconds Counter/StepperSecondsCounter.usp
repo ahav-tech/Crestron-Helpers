@@ -1,0 +1,71 @@
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+//#DEFINE_CONSTANT MAXIO 16
+
+#HELP_BEGIN
+Provides a seconds counter (up or down) in both analog and serial numbers based on the progress of a Stepper (w/Progress and Reset).
+Hooks onto the total time lo output to get the total time, and the bar analog to get the progress itself.
+
+Counts up by default, unless the CountDown input is high.
+#HELP_END
+//#USER_SIMPLSHARP_LIBRARY "LibraryName"
+
+
+DIGITAL_INPUT CountDown;
+ANALOG_INPUT bar, TotalTimeLoWord;
+//STRING_INPUT 
+
+//DIGITAL_OUTPUT 
+ANALOG_OUTPUT SecondsNumber;
+STRING_OUTPUT SecondsText;
+
+//Global vars
+
+long_integer NewSeconds;
+long_integer OldSeconds;
+integer TotalTimeSeconds;
+
+//Events
+
+change bar
+{
+    
+
+    TotalTimeSeconds = TotalTimeLoWord/100;
+
+    NewSeconds = (bar*100)/(65535) * (TotalTimeSeconds); //work around coz no floats
+    NewSeconds = NewSeconds / 100; //reverse workaround
+    if(CountDown)
+    {
+        NewSeconds = TotalTimeSeconds - NewSeconds;
+    }
+
+    if(NewSeconds != OldSeconds)
+    {
+        SecondsNumber = NewSeconds;
+        SecondsText = itoa(NewSeconds);
+    }
+    
+    OldSeconds = NewSeconds;
+}
+
+
+/*******************************************************************************************
+Main()
+Uncomment and place one-time startup code here
+(This code will get called when the system starts up)
+*******************************************************************************************/
+
+Function Main()
+{
+    // TODO:  Add code here
+    // Initialize declared global and local variables/arrays as needed.
+
+    // WaitForInitializationComplete();
+    // If you are reading any Input or Output variables, uncomment
+    //   the WaitForInitializationComplete statement above and read
+    //   them afterwards.  Input/Output variables will not have
+    //   their correct values set until after the logic processor
+    //   runs and propagates the values to them.
+}

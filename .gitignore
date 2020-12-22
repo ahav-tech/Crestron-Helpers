@@ -1,0 +1,5 @@
+*.asv
+SPlsWork/
+~$*
+_temp/
+.DS_Store

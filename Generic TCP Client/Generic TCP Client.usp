@@ -1,0 +1,170 @@
+
+#SYMBOL_NAME "Generic TCP Client"
+
+#DEFINE_CONSTANT    FALSE        0
+#DEFINE_CONSTANT    TRUE         1
+
+//#DEFINE_CONSTANT    INCLUDE_NEW_CODE    1
+
+INTEGER debugEnabled;
+
+
+DIGITAL_INPUT diStartClient;
+DIGITAL_INPUT diClientReconnectEnable;
+ANALOG_INPUT aiClientPortNumber;
+STRING_INPUT siClientIPAddress[256];
+STRING_INPUT siClientTx[256];
+DIGITAL_INPUT debugEnable;
+
+DIGITAL_OUTPUT doClientConnected;
+ANALOG_OUTPUT  aoClientStatus;
+STRING_OUTPUT  soClientRx;
+STRING_OUTPUT debugMsg;
+
+TCP_CLIENT MyClient[1024];
+
+
+
+FUNCTION DebugPrint(STRING debugString)
+{
+    if (debugEnabled)
+    {
+        MAKESTRING(debugMsg, "%s", debugString);
+    }
+}
+
+// Client Code
+
+PUSH diStartClient
+{
+    SIGNED_INTEGER status;
+    STRING localDebug[128];
+
+    status = SocketConnectClient (MyClient, siClientIPAddress, aiClientPortNumber, diClientReconnectEnable);
+
+    if (status < 0)
+    {
+        MAKESTRING(localDebug,"Error connecting socket to address %s on port  %d", SiClientIPAddress, aiClientPortNumber);
+        DebugPrint(localDebug);
+    }
+}
+
+RELEASE diStartClient
+{
+    SIGNED_INTEGER status;
+    STRING localDebug[128];
+
+    status = SocketDisconnectClient (MyClient);
+
+    if (status < 0)
+    {
+        MAKESTRING(localDebug,"Error disconnecting socket to address %s on port  %d", SiClientIPAddress, aiClientPortNumber);
+        DebugPrint(localDebug);
+    }
+}
+
+SOCKETCONNECT MyClient
+{
+    SIGNED_LONG_INTEGER PortNumber;
+    SIGNED_INTEGER LocalStatus;
+    STRING RemoteIPAddress[20];
+    STRING RequestedAddress[256];
+    STRING localDebug[128];
+    
+    doClientConnected = 1;
+
+    LocalStatus = SocketGetAddressAsRequested(MyClient, RequestedAddress);
+    if (LocalStatus < 0)
+    {
+        MAKESTRING(localDebug,"Error getting remote ip address. %d\n", LocalStatus);
+        DebugPrint(localDebug);
+    } 
+    MAKESTRING(localDebug,"OnConnect: Connect call to %s successful\n", RequestedAddress);
+    DebugPrint(localDebug);
+
+    PortNumber = SocketGetPortNumber(MyClient);
+    if (PortNumber < 0)
+    {
+        MAKESTRING(localDebug,"Error getting client port number. %ld\n", PortNumber);
+        DebugPrint(localDebug);
+    }
+
+    LocalStatus = SocketGetRemoteIPAddress(MyClient, RemoteIPAddress);
+    if (LocalStatus < 0)
+    {
+        MAKESTRING(localDebug,"Error getting remote ip address. %d\n", LocalStatus);
+        DebugPrint(localDebug);
+    }
+    MAKESTRING(localDebug,"OnConnect: Connected to port %ld on address %s\n", PortNumber, RemoteIPAddress);
+    DebugPrint(localDebug);
+
+    //SocketSend(MyClient, "This is sent when the socket starts.");
+}
+
+SOCKETDISCONNECT MyClient
+{
+    STRING localDebug[128];
+
+    doClientConnected = 0;
+
+    if (diStartClient)
+    {
+        DebugPrint("Socket disconnected remotely");
+        DebugPrint(localDebug);
+    }
+    Else
+    {
+        DebugPrint("Local disconnect complete.");
+        DebugPrint(localDebug);
+    }
+}
+
+SOCKETSTATUS MyClient
+{
+    SIGNED_INTEGER Status;
+    STRING localDebug[128];  
+
+    Status = SocketGetStatus();
+    aoClientStatus = Status;
+
+    MAKESTRING(localDebug,"The SocketGetStatus returns:       %d\n", Status);
+    DebugPrint(localDebug);
+
+    MAKESTRING(localDebug,"The MyClient.SocketStatus returns: %d\n", MyClient.SocketStatus);
+    DebugPrint(localDebug);
+}
+
+SOCKETRECEIVE MyClient
+{
+    STRING localDebug[128];
+
+    if (Len(MyClient.SocketRxBuf) < 256)
+    {
+        MAKESTRING(localDebug,"Rx: %s", MyClient.SocketRxBuf);
+        DebugPrint(localDebug);
+    }
+
+    // for now, send to serial output and clear buffer
+    soClientRx = MyClient.SocketRxBuf;
+    ClearBuffer(MyClient.SocketRxBuf);
+}
+
+CHANGE siClientTx
+{
+    signed_integer iStatus;
+    STRING localDebug[128];
+
+    iStatus = SocketSend(MyClient, siClientTx );
+
+    if (iStatus < 0)
+    {
+        MAKESTRING(localDebug,"Error Sending to MyClient: %d\n", iStatus);
+        DebugPrint(localDebug);
+    }
+}
+
+FUNCTION Main()
+{
+    debugEnabled = 0;
+	WaitForInitializationComplete();
+}
