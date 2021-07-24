@@ -8,21 +8,27 @@
 
 INTEGER debugEnabled;
 
-
+DIGITAL_INPUT _skip_, _skip_;
 DIGITAL_INPUT diStartClient;
 DIGITAL_INPUT diClientReconnectEnable;
 ANALOG_INPUT aiClientPortNumber;
-STRING_INPUT siClientIPAddress[256];
-STRING_INPUT siClientTx[256];
+STRING_INPUT siClientIPAddress[16];
+STRING_INPUT siClientTx[512];
 DIGITAL_INPUT debugEnable;
 
+DIGITAL_OUTPUT _skip_, _skip_;
 DIGITAL_OUTPUT doClientConnected;
 ANALOG_OUTPUT  aoClientStatus;
 STRING_OUTPUT  soClientRx;
 STRING_OUTPUT debugMsg;
 
+INTEGER_PARAMETER paClientPortNumber;
+STRING_PARAMETER paClientIPAddress[16];
+
 TCP_CLIENT MyClient[1024];
 
+STRING ClientIPAddress[16];
+INTEGER ClientPortNumber;
 
 
 FUNCTION DebugPrint(STRING debugString)
@@ -34,17 +40,33 @@ FUNCTION DebugPrint(STRING debugString)
 }
 
 // Client Code
+ 
+CHANGE aiClientPortNumber
+{
+	if(aiClientPortNumber > 0)
+	{
+    	ClientPortNumber = aiClientPortNumber;
+	}
+}
+
+CHANGE siClientIPAddress
+{
+	if(len(siClientIPAddress) > 0)
+	{
+    	ClientIPAddress = siClientIPAddress;
+	}
+}
 
 PUSH diStartClient
 {
     SIGNED_INTEGER status;
     STRING localDebug[128];
 
-    status = SocketConnectClient (MyClient, siClientIPAddress, aiClientPortNumber, diClientReconnectEnable);
+    status = SocketConnectClient (MyClient, ClientIPAddress, ClientPortNumber, diClientReconnectEnable);
 
     if (status < 0)
     {
-        MAKESTRING(localDebug,"Error connecting socket to address %s on port  %d", SiClientIPAddress, aiClientPortNumber);
+        MAKESTRING(localDebug,"Error connecting socket to address %s on port  %d", ClientIPAddress, ClientPortNumber);
         DebugPrint(localDebug);
     }
 }
@@ -58,7 +80,7 @@ RELEASE diStartClient
 
     if (status < 0)
     {
-        MAKESTRING(localDebug,"Error disconnecting socket to address %s on port  %d", SiClientIPAddress, aiClientPortNumber);
+        MAKESTRING(localDebug,"Error disconnecting socket to address %s on port  %d", ClientIPAddress, ClientPortNumber);
         DebugPrint(localDebug);
     }
 }
@@ -136,9 +158,9 @@ SOCKETSTATUS MyClient
 
 SOCKETRECEIVE MyClient
 {
-    STRING localDebug[128];
+    STRING localDebug[516];
 
-    if (Len(MyClient.SocketRxBuf) < 256)
+    if (Len(MyClient.SocketRxBuf) < 512)
     {
         MAKESTRING(localDebug,"Rx: %s", MyClient.SocketRxBuf);
         DebugPrint(localDebug);
@@ -166,5 +188,9 @@ CHANGE siClientTx
 FUNCTION Main()
 {
     debugEnabled = 0;
+    
+	ClientPortNumber = paClientPortNumber;
+	ClientIPAddress = paClientIPAddress;
+	
 	WaitForInitializationComplete();
 }
