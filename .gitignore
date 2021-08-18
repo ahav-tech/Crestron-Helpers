@@ -3,3 +3,5 @@ SPlsWork/
 ~$*
 _temp/
 .DS_Store
+*_bak.gcpro
+*_bak.gcplus

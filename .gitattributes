@@ -1,1 +1,9 @@
 *.smw binary
+*.vtp binary
+*.src binary
+*.tkn binary
+*.tko binary
+*.tp4 binary
+*.tp5 binary
+*.gcplus binary
+*.gcpro binary

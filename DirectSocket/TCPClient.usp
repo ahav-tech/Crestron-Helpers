@@ -1,0 +1,200 @@
+// Declarations
+// #SYMBOL_NAME ""
+// #HINT ""
+#CATEGORY "46" "Network Interface" // Custom
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE 
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+ 
+// Constants
+
+// I/O
+DIGITAL_INPUT _skip_, _skip_;
+DIGITAL_INPUT EnableDebug;
+DIGITAL_INPUT EnableClient;
+DIGITAL_INPUT AutoReconnect;
+ANALOG_INPUT ClientPortNumberInput;
+STRING_INPUT ClientIPAddressInput[16];
+STRING_INPUT ClientTx[1024];
+
+DIGITAL_OUTPUT _skip_, _skip_;
+DIGITAL_OUTPUT ClientConnected;
+ANALOG_OUTPUT  ClientStatus;
+STRING_OUTPUT  ClientRx;
+
+// Sockets
+TCP_Client MyClient[1024];
+
+// Parameters
+INTEGER_PARAMETER ClientPortNumberParam;
+STRING_PARAMETER ClientIPAddressParam[16];
+
+// Parameter properties
+#BEGIN_PARAMETER_PROPERTIES ClientPortNumberParam 
+   propValidUnits = unitDecimal;
+   propDefaultUnit = unitDecimal;
+#END_PARAMETER_PROPERTIES
+
+#BEGIN_PARAMETER_PROPERTIES ClientIPAddressParam 
+   propValidUnits = unitString;
+   propDefaultUnit = unitString;
+#END_PARAMETER_PROPERTIES
+
+// Global Cars
+INTEGER ClientPortNumber; 
+STRING ClientIPAddress[16];
+
+STRING DebugString[256];
+
+// Functions
+FUNCTION SendDebug()
+{
+ 	IF(EnableDebug)
+	{
+    	Print("%s: %s", GetSymbolInstanceName(), DebugString);
+	}
+}
+
+// Events
+PUSH EnableClient
+{
+    SIGNED_INTEGER status;
+
+    status = SocketConnectClient (MyClient, ClientIPAddress, ClientPortNumber, AutoReconnect);
+    if (status < 0)
+    {
+        MakeString(DebugString, "Error connecting socket to address %s on port  %d", ClientIPAddress, ClientPortNumber);
+		SendDebug();
+    }
+}
+
+RELEASE EnableClient
+{
+    SIGNED_INTEGER status;
+
+    status = SocketDisconnectClient (MyClient);
+	if (status < 0)
+    {
+    	MakeString(DebugString, "Error disconnecting socket to address %s on port  %d", ClientIPAddress, ClientPortNumber);
+		SendDebug();
+    }
+}
+
+SOCKETCONNECT MyClient
+{
+    SIGNED_LONG_INTEGER PortNumber;
+    SIGNED_INTEGER LocalStatus;
+    STRING RemoteIPAddress[20];
+    STRING RequestedAddress[256];
+    
+	ClientConnected = 1;
+
+    LocalStatus = SocketGetAddressAsRequested(MyClient, RequestedAddress);
+    if (LocalStatus < 0)
+    {
+        MakeString(DebugString, "Error getting remote ip address. %d\n", LocalStatus);
+		SendDebug();
+    }
+    else
+	{
+    	MakeString(DebugString, "OnConnect: Connect call to %s successful\n", RequestedAddress);
+		SendDebug();
+    }
+
+	PortNumber = SocketGetPortNumber(MyClient);
+    if (PortNumber < 0)
+    {
+        MakeString(DebugString, "Error getting client port number. %ld\n", PortNumber);
+		SendDebug();
+    }
+    
+	LocalStatus = SocketGetRemoteIPAddress(MyClient, RemoteIPAddress);
+    if (LocalStatus < 0)
+    {
+        MakeString(DebugString, "Error getting remote ip address. %d\n", LocalStatus);
+		SendDebug();
+    }
+	else
+	{
+    	MakeString(DebugString, "OnConnect: Connected to port %ld on address %s\n", PortNumber, RemoteIPAddress);
+		SendDebug();
+    }
+}
+
+SOCKETDISCONNECT MyClient
+{
+    ClientConnected = 0;
+    if (EnableClient)
+    {
+        MakeString(DebugString, "Socket disconnected remotely");
+		SendDebug();
+    }
+    Else
+    {
+        MakeString(DebugString, "Local disconnect complete.");
+		SendDebug();
+    }
+}
+
+SOCKETSTATUS MyClient
+{
+    SIGNED_INTEGER Status;
+    
+	Status = SocketGetStatus();
+    ClientStatus = Status;
+    Print("The SocketGetStatus returns:       %d\n", Status);
+	SendDebug();
+    Print("The MyClient.SocketStatus returns: %d\n", MyClient.SocketStatus);
+	SendDebug();
+}
+
+SOCKETRECEIVE MyClient
+{
+    if (Len(MyClient.SocketRxBuf) < 256)
+    {
+        MakeString(DebugString, "Rx: %s", MyClient.SocketRxBuf);
+		SendDebug();
+    }
+    ClientRx = MyClient.SocketRxBuf;
+    ClearBuffer(MyClient.SocketRxBuf);
+}
+
+CHANGE ClientTx
+{
+    signed_integer iStatus;
+
+    iStatus = SocketSend(MyClient, ClientTx );
+    if (iStatus < 0)
+    {
+        MakeString(DebugString, "Error Sending to MyClient: %d\n", iStatus);
+		SendDebug();
+    }
+}
+ 
+CHANGE ClientPortNumberInput
+{
+ 	ClientPortNumber = ClientPortNumberInput;
+}
+
+CHANGE ClientIPAddressInput
+{
+ 	ClientIPAddress = ClientIPAddressInput;
+}
+
+
+Function Main()
+{
+	ClientPortNumber = ClientPortNumberParam;
+	ClientIPAddress = ClientIPAddressParam;
+
+	WaitForInitializationComplete();
+}
+
+
+

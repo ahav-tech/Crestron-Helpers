@@ -1,0 +1,172 @@
+// Declarations
+// #SYMBOL_NAME ""
+// #HINT ""
+#CATEGORY "46" "Network Interface" // Custom
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE 
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+ 
+// Constants
+
+// I/O
+DIGITAL_INPUT _skip_, _skip_;
+DIGITAL_INPUT EnableDebug;
+DIGITAL_INPUT EnableSocket;
+ANALOG_INPUT SocketPortNumberInput;
+STRING_INPUT SocketIPAddressInput[16];
+STRING_INPUT SocketTx[1024];
+
+DIGITAL_OUTPUT _skip_, _skip_;
+STRING_OUTPUT  SocketRx;
+
+// Sockets
+UDP_SOCKET MyUDP[1024];
+
+// Parameters
+INTEGER_PARAMETER SocketPortNumberParam;
+STRING_PARAMETER SocketIPAddressParam[16];
+
+// Parameter properties
+#BEGIN_PARAMETER_PROPERTIES SocketPortNumberParam 
+   propValidUnits = unitDecimal;
+   propDefaultUnit = unitDecimal;
+#END_PARAMETER_PROPERTIES
+
+#BEGIN_PARAMETER_PROPERTIES SocketIPAddressParam 
+   propValidUnits = unitString;
+   propDefaultUnit = unitString;
+   propDefaultValue = "127.0.0.1";
+#END_PARAMETER_PROPERTIES
+
+// Global Cars
+INTEGER SocketPortNumber; 
+STRING SocketIPAddress[16];
+
+STRING DebugString[256];
+
+// Functions
+FUNCTION SendDebug()
+{
+ 	IF(EnableDebug)
+	{
+    	Print("%s: %s", GetSymbolInstanceName(), DebugString);
+	}
+}
+
+// Events
+PUSH EnableSocket
+{
+    SIGNED_INTEGER status;
+
+    status = SocketUDP_Enable(MyUDP, SocketIPAddress, SocketPortNumber);
+    if (status < 0)
+    {
+        MakeString(DebugString, "Error listening to %s on port  %d", SocketIPAddress, SocketPortNumber);
+		SendDebug();
+    }
+}
+
+RELEASE EnableSocket
+{
+    SIGNED_INTEGER status;
+
+    status = SocketUDP_Disable (MyUDP);
+    if (status < 0)
+    {    
+        MakeString(DebugString, "Error disabling UDP on port  %d", SocketPortNumber);
+		SendDebug();
+    }
+}
+
+SOCKETRECEIVE MyUDP
+{
+    SIGNED_INTEGER IsBroadcast;
+    SIGNED_INTEGER IsMulticast;
+    SIGNED_INTEGER LocalStatus;
+    STRING SenderIPAddress[32];
+
+    IsBroadcast = SocketIsBroadcast(MyUDP);
+    if (IsBroadcast < 0)
+    {
+        MakeString(DebugString, "IsBroadcast returned error: %d\n", IsBroadcast);
+		SendDebug();
+    }
+
+    IsMulticast = SocketIsMulticast(MyUDP);
+    if (IsMulticast < 0)
+    {
+        MakeString(DebugString, "IsMulticast returned error: %d\n", IsMulticast);
+		SendDebug();
+    }
+
+    LocalStatus = SocketGetSenderIPAddress(MyUDP, SenderIPAddress);
+    if (LocalStatus < 0)
+    {
+        MakeString(DebugString, "SocketGetSenderIPAddress returned error: %d\n", LocalStatus);
+		SendDebug();
+    }
+
+    if (IsBroadcast)
+    {
+        MakeString(DebugString, "Broadcast data received from %s\n", SenderIPAddress);
+		SendDebug();
+    }
+    else if (IsMulticast)
+    {
+        MakeString(DebugString, "Multicast data received from %s\n", SenderIPAddress);
+		SendDebug();
+    }
+    else
+    {
+        MakeString(DebugString, "Unicast data received from %s\n", SenderIPAddress);
+        SendDebug();
+	}
+
+    if (Len(MyUDP.SocketRxBuf) < 256)
+    {
+        MakeString(DebugString, "Rx: %s", MyUDP.SocketRxBuf);
+		SendDebug();
+    }
+    SocketRx = MyUDP.SocketRxBuf;
+    ClearBuffer(MyUDP.SocketRxBuf);
+}
+
+CHANGE SocketTx
+{
+    signed_integer iStatus;
+
+    iStatus = SocketSend(MyUDP, SocketTx );
+    if (iStatus < 0)
+    {
+        MakeString(DebugString, "Error Sending to MyUDP: %d\n", iStatus);
+		SendDebug();
+    }
+}
+  
+CHANGE SocketPortNumberInput
+{
+ 	SocketPortNumber = SocketPortNumberInput;
+}
+
+CHANGE SocketIPAddressInput
+{
+ 	SocketIPAddress = SocketIPAddressInput;
+}
+
+// Main
+Function Main()
+{
+	SocketPortNumber = SocketPortNumberParam;
+	SocketIPAddress = SocketIPAddressParam;
+
+	WaitForInitializationComplete();
+}
+
+
+

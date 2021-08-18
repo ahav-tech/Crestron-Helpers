@@ -1,0 +1,170 @@
+// Declarations
+// #SYMBOL_NAME ""
+// #HINT ""
+#CATEGORY "46" "Network Interface" // Custom
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE 
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+ 
+// Constants
+
+// I/O
+DIGITAL_INPUT _skip_, _skip_;
+DIGITAL_INPUT EnableDebug;
+DIGITAL_INPUT EnableServer;
+ANALOG_INPUT ServerPortNumberInput;
+STRING_INPUT ServerIPAddressInput[16];
+STRING_INPUT ServerTx[1024];
+
+DIGITAL_OUTPUT _skip_, _skip_;
+DIGITAL_OUTPUT ServerConnected;
+ANALOG_OUTPUT  ServerStatus;
+STRING_OUTPUT  ServerRx;
+
+// Sockets
+TCP_SERVER MyServer[1024];
+
+// Parameters
+INTEGER_PARAMETER ServerPortNumberParam;
+STRING_PARAMETER ServerIPAddressParam[16];
+
+// Parameter properties
+#BEGIN_PARAMETER_PROPERTIES ServerPortNumberParam 
+   propValidUnits = unitDecimal;
+   propDefaultUnit = unitDecimal;
+#END_PARAMETER_PROPERTIES
+
+#BEGIN_PARAMETER_PROPERTIES ServerIPAddressParam 
+   propValidUnits = unitString;
+   propDefaultUnit = unitString;
+   propDefaultValue = "";
+   propShortDescription= "leave blank to accept from anywhere";
+#END_PARAMETER_PROPERTIES
+
+// Global Cars
+INTEGER ServerPortNumber; 
+STRING ServerIPAddress[16];
+
+STRING DebugString[256];
+
+// Functions
+FUNCTION SendDebug()
+{
+ 	IF(EnableDebug)
+	{
+    	Print("%s: %s", GetSymbolInstanceName(), DebugString);
+	}
+}
+
+// Events
+PUSH EnableServer
+{
+    SIGNED_INTEGER status;
+
+    status = SocketServerStartListen(MyServer, ServerIPAddress, ServerPortNumber);
+    if (status < 0)
+	{
+        MakeString(DebugString, "Error listening to %s on port %u (status: %d)", ServerIPAddress, ServerPortNumber, status);
+		SendDebug();
+    }
+}
+
+RELEASE EnableServer
+{
+    SIGNED_INTEGER status;
+
+    status = SocketServerStopListen(MyServer);
+    if (status < 0)
+    {
+        MakeString(DebugString, "Error stopping server (status: %d)", status);
+		SendDebug();
+    }
+}
+
+SOCKETCONNECT MyServer
+{
+    SIGNED_INTEGER PortNumber;
+
+    ServerConnected = 1;
+    MakeString(DebugString, "OnConnect: input buffer size is: %d\n", Len(MyServer.SocketRxBuf));
+	SendDebug();
+    SocketSend(MyServer, "This is sent when the socket starts.");
+}
+
+SOCKETDISCONNECT MyServer
+{
+    ServerConnected = 0;
+    if (EnableServer)
+    {
+        MakeString(DebugString, "Socket disconnected remotely");
+		SendDebug();
+    }
+    Else
+    {
+        MakeString(DebugString, "Local disconnect complete.");
+		SendDebug();
+    }
+}
+
+SOCKETSTATUS MyServer
+{
+    SIGNED_INTEGER Status;
+    
+	Status = SocketGetStatus();
+    ServerStatus = Status;
+    MakeString(DebugString, "The SocketGetStatus returns:       %d\n", Status);
+	SendDebug();
+    MakeString(DebugString, "The MyServer.SocketStatus returns: %d\n", MyServer.SocketStatus);
+	SendDebug();
+}
+
+SOCKETRECEIVE MyServer
+{
+    if (Len(MyServer.SocketRxBuf) < 256)
+    {
+        MakeString(DebugString, "Rx: %s", MyServer.SocketRxBuf);
+		SendDebug();
+    }
+    ServerRx = MyServer.SocketRxBuf;
+    ClearBuffer(MyServer.SocketRxBuf);
+}
+
+CHANGE ServerTx
+{
+    signed_integer iStatus;
+
+    iStatus = SocketSend(MyServer, ServerTx );
+    if (iStatus < 0)
+    {
+        MakeString(DebugString, "Error Sending to MyServer: %d\n", iStatus);
+		SendDebug();
+    }
+}
+  
+CHANGE ServerPortNumberInput
+{
+ 	ServerPortNumber = ServerPortNumberInput;
+}
+
+CHANGE ServerIPAddressInput
+{
+ 	ServerIPAddress = ServerIPAddressInput;
+}
+
+
+Function Main()
+{
+	ServerPortNumber = ServerPortNumberParam;
+	ServerIPAddress = ServerIPAddressParam;
+
+	WaitForInitializationComplete();
+}
+
+
+
