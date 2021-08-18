@@ -1,0 +1,53 @@
+// Declarations
+// #SYMBOL_NAME ""
+// #HINT ""
+#CATEGORY "10" // Serial
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+
+//#HELP_BEGIN
+//#HELP_END
+
+
+// Includes
+
+// I/Os
+DIGITAL_INPUT _skip_, _skip_;
+DIGITAL_INPUT ClearIfInputIsEmpty, _skip_;
+STRING_INPUT StringInput[256];
+
+DIGITAL_OUTPUT _skip_, _skip_, _skip_, _skip_;
+STRING_OUTPUT StringOutput;
+
+// Sockets
+
+// Parameters
+
+STRING_PARAMETER Prefix[128], Suffix[128];
+
+// Parameter Properties
+
+// Structures
+
+// Global Vars
+
+// Functions
+CHANGE StringInput
+{
+	if(ClearIfInputIsEmpty)
+	{
+   		makestring(StringOutput, "");  	
+	}
+	else
+	{
+    	makeString(StringOutput, "%s%s%s", prefix, StringInput, suffix);
+	}	
+}
+
+Function Main()
+{
+	WaitForInitializationComplete();
+}
+
+
