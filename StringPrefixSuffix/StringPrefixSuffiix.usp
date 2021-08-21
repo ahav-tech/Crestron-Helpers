@@ -35,7 +35,7 @@ STRING_PARAMETER Prefix[128], Suffix[128];
 // Functions
 CHANGE StringInput
 {
-	if(ClearIfInputIsEmpty)
+	if( ClearIfInputIsEmpty && (len(StringInput) = 0) )
 	{
    		makestring(StringOutput, "");  	
 	}
