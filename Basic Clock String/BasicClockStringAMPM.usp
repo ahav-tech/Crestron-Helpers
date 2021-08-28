@@ -29,12 +29,14 @@ Programmer: AH
 // #ENCODING_INHERIT_FROM_PROGRAM
 
 #HELP_BEGIN
-   Spits out a string with the current time in the format HH:MM xM every 10 seconds
+   Spits out a string with the current time in the format HH:MM xM every 10 seconds, but only if it has changed
 #HELP_END
 
 
 STRING_OUTPUT ClockString;
  
+INTEGER oldMinutes;
+
 STRING_FUNCTION GetAmPm()
 {
 	INTEGER hour;
@@ -68,15 +70,26 @@ INTEGER_FUNCTION Get12HourNum()
 	return(temp);
 }
 
+Function SendTime()
+{
+	makestring(ClockString,"%u:%02u %s", Get12HourNum(), GetMinutesNum(), GetAmPm());
+	oldMinutes = GetMinutesNum();
+}
+
 Function Main()
 {
     WaitForInitializationComplete();
-
+    
+    SendTime();
+	
 	while(1)
 	{
 		wait(1000)
 		{
-			makestring(ClockString,"%u:%02u %s", Get12HourNum(), GetMinutesNum(), GetAmPm());
+			if(GetMinutesNum() != oldMinutes)
+			{
+        		SendTime();
+			}
 		}
 	}
 }

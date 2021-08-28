@@ -29,21 +29,34 @@ Programmer: AH
 // #ENCODING_INHERIT_FROM_PROGRAM
 
 #HELP_BEGIN
-   Spits out a string with the current time in the format HH:MM every 10 seconds
+   Spits out a string with the current time in the format HH:MM every 10 seconds, but only if it has changed
 #HELP_END
 
 
 STRING_OUTPUT ClockString;
+
+INTEGER oldMinutes;
+
+Function SendTime()
+{
+	makestring(ClockString,"%u:%02u", GetHourNum(), GetMinutesNum());
+	oldMinutes = GetMinutesNum();
+}
  
 Function Main()
 {
     WaitForInitializationComplete();
+    	
+	SendTime();
 
 	while(1)
 	{
 		wait(1000)
 		{
-        	makestring(ClockString,"%u:%02u", GetHourNum(), GetMinutesNum());
+			if(GetMinutesNum() != oldMinutes)
+			{
+        		SendTime();
+			}
 		}
 	}
 }

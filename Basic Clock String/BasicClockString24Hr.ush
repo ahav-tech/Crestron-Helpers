@@ -6,13 +6,13 @@
   Sgntr=UserSPlus
   RelVrs=1
   IntStrVrs=1
-  SPlusVrs=4.05.01
+  SPlusVrs=4.06.00
   CrossCplrVrs=1.3
 [END]
 [BEGIN]
   ObjTp=Hd
   Cmn1=||3Spits out a string with the current time in the format HH:MM||1
-  Cmn2=every 10 seconds
+  Cmn2=every 10 seconds, but only if it has changed
 [END]
 [BEGIN]
   ObjTp=Symbol
