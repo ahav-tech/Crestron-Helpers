@@ -1,0 +1,212 @@
+// Declarations
+// #SYMBOL_NAME ""
+// #HINT ""
+#CATEGORY "12" // System Control
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE
+
+#DEFINE_CONSTANT DebugOnString "Debug=__true"
+#DEFINE_CONSTANT DebugOffString "Debug=_false"
+
+
+#HELP_BEGIN
+Basically a glorified file-based SR latch.
+Intent is to allow running or halting of logic based on whether a flag has been set in a text file stored in NVRAM.
+Example use is to prevent running of program until debug is bypassed to allow debugging init logic.
+
+BypassDebugOn/Off bypasses the file setting and just switches the outputs directly (does not change file).
+SetDebugOn/Off changes the file setting and updates the outputs to suit.
+
+Inputs are leading edge triggered.
+Outputs are latched.
+#HELP_END
+
+// Includes
+
+// I/Os
+DIGITAL_INPUT _skip_, _skip_;
+DIGITAL_INPUT BypassDebugOn, BypassDebugOff;
+DIGITAL_INPUT _skip_;
+DIGITAL_INPUT SetDebugOn, SetDebugOff;
+
+DIGITAL_OUTPUT _skip_, _skip_;
+DIGITAL_OUTPUT DebugIsOn_fb;
+DIGITAL_OUTPUT DebugIsOff_fb;
+
+// Sockets
+
+// Parameters                        
+STRING_PARAMETER FileName[24];
+
+// Parameter Properties
+#BEGIN_PARAMETER_PROPERTIES FileName
+	propDefaultValue = "debug.cfg";
+#END_PARAMETER_PROPERTIES
+
+// Structures
+
+// Global Variables
+
+integer debugModeEnabled;
+
+
+
+
+// Functions
+// OTHER
+FUNCTION setDebug(integer enable)
+{
+ 	if(enable)
+	{
+		debugModeEnabled = on;
+		DebugIsOn_fb = on;
+		DebugIsOff_fb = off;
+	}
+	else
+	{
+        debugModeEnabled = off;
+		DebugIsOn_fb = off;
+		DebugIsOff_fb = on;
+	}
+}
+
+FUNCTION ParseFile(string buffer)
+{
+ 	if(find(DebugOnString, buffer))
+	{
+     	setDebug(on);
+	}
+	else if(find(DebugOffString, buffer))
+	{
+     	setDebug(off);
+	}
+}
+
+// FILE MANAGEMENT
+FUNCTION WriteFile(integer enable)
+{
+ 	string tempFilePath[128];
+	string readBuffer[100];
+	signed_integer fileHandle;
+    
+	StartFileOperations();
+
+	makestring(tempFilePath, "\\NVRAM\\%s", FileName);  	
+	fileHandle = FileOpenShared(tempFilePath, _O_WRONLY | _O_CREAT | _O_TEXT);
+	
+	if(fileHandle >= 0)
+	{
+		if(enable)
+		{
+			FileWrite(fileHandle, DebugOnString, len(DebugOnString));
+		}
+		else
+		{
+            FileWrite(fileHandle, DebugOffString, len(DebugOffString));
+		}
+
+		if(FileClose(fileHandle) <> 0)
+    	{
+        	print("Write: Error closing file\n");
+        }
+	}
+	else
+	{
+		setDebug(off);
+		print("Write: Error opening file: %s\n", tempFilePath);
+	}
+
+    EndFileOperations(); 
+}
+
+FUNCTION ReadFile()
+{
+	string tempFilePath[128];
+	string readBuffer[100];
+	signed_integer fileHandle;
+	integer revertToDefault;
+    
+	StartFileOperations();
+    
+	makestring(tempFilePath, "\\NVRAM\\%s", FileName);
+	fileHandle = FileOpenShared(tempFilePath, _O_RDONLY | _O_TEXT);
+		
+	if(fileHandle >= 0)
+	{
+    	if(FileRead(fileHandle, readBuffer, 100) > 0)
+        {
+        	ParseFile(readBuffer);
+		}
+		else
+		{
+         	revertToDefault = on; //file empty?
+		}
+
+		if(FileClose(fileHandle) <> 0)
+    	{
+        	print("Read: Error closing file\n");
+        }
+	}
+	else
+	{
+		if(fileHandle = -3024)
+		{
+			revertToDefault = on; //no file?
+		}
+		else
+		{
+            print("Read: Error %d opening file: %s\n", fileHandle, tempFilePath);
+
+		}
+	}
+    EndFileOperations();
+
+	if(revertToDefault)
+	{
+		setDebug(off);     	
+		WriteFile(off);
+	} 	 	
+}
+
+// SYSTEM
+FUNCTION PreInit()
+{
+
+}
+
+FUNCTION Init()
+{
+	ReadFile();
+}
+
+// Events
+PUSH SetDebugOn
+{
+	WriteFile(on);
+    setDebug(on);
+}
+
+PUSH SetDebugOff
+{
+	WriteFile(off);
+    setDebug(off);
+}
+
+PUSH BypassDebugOn
+{
+    setDebug(on);
+}
+
+PUSH BypassDebugOff
+{
+    setDebug(off);
+}
+
+Function Main()
+{
+	PreInit();
+	WaitForInitializationComplete();
+	Init();	
+}
