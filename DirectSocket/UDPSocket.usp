@@ -59,8 +59,7 @@ FUNCTION SendDebug()
 	}
 }
 
-// Events
-PUSH EnableSocket
+FUNCTION SocketOpen()
 {
     SIGNED_INTEGER status;
 
@@ -72,7 +71,7 @@ PUSH EnableSocket
     }
 }
 
-RELEASE EnableSocket
+FUNCTION SocketClose()
 {
     SIGNED_INTEGER status;
 
@@ -82,6 +81,18 @@ RELEASE EnableSocket
         MakeString(DebugString, "Error disabling UDP on port  %d", SocketPortNumber);
 		SendDebug();
     }
+}
+
+
+// Events
+PUSH EnableSocket
+{
+    SocketOpen();
+}
+
+RELEASE EnableSocket
+{
+    SocketClose();
 }
 
 SOCKETRECEIVE MyUDP
@@ -151,12 +162,16 @@ CHANGE SocketTx
   
 CHANGE SocketPortNumberInput
 {
+	SocketClose();
  	SocketPortNumber = SocketPortNumberInput;
+	SocketOpen();
 }
 
 CHANGE SocketIPAddressInput
 {
+	SocketClose();
  	SocketIPAddress = SocketIPAddressInput;
+	SocketOpen();
 }
 
 // Main
