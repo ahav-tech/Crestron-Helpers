@@ -62,8 +62,7 @@ FUNCTION SendDebug()
 	}
 }
 
-// Events
-PUSH EnableServer
+FUNCTION SocketOpen()
 {
     SIGNED_INTEGER status;
 
@@ -75,7 +74,7 @@ PUSH EnableServer
     }
 }
 
-RELEASE EnableServer
+FUNCTION SocketClose()
 {
     SIGNED_INTEGER status;
 
@@ -85,6 +84,17 @@ RELEASE EnableServer
         MakeString(DebugString, "Error stopping server (status: %d)", status);
 		SendDebug();
     }
+}
+
+// Events
+PUSH EnableServer
+{
+    SocketOpen();
+}
+
+RELEASE EnableServer
+{
+    SocketClose();
 }
 
 SOCKETCONNECT MyServer
@@ -149,12 +159,22 @@ CHANGE ServerTx
   
 CHANGE ServerPortNumberInput
 {
+	SocketClose();
  	ServerPortNumber = ServerPortNumberInput;
+	if(EnableServer)
+	{
+		SocketOpen();
+	}
 }
 
 CHANGE ServerIPAddressInput
 {
+	SocketClose();
  	ServerIPAddress = ServerIPAddressInput;
+	if(EnableServer)
+	{
+		SocketOpen();
+	}
 }
 
 

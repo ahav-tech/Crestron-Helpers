@@ -164,14 +164,20 @@ CHANGE SocketPortNumberInput
 {
 	SocketClose();
  	SocketPortNumber = SocketPortNumberInput;
-	SocketOpen();
+	if(EnableSocket)
+	{
+		SocketOpen();
+	}
 }
 
 CHANGE SocketIPAddressInput
 {
 	SocketClose();
  	SocketIPAddress = SocketIPAddressInput;
-	SocketOpen();
+	if(EnableSocket)
+	{
+		SocketOpen();
+	}
 }
 
 // Main

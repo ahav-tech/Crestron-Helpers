@@ -61,10 +61,9 @@ FUNCTION SendDebug()
 	}
 }
 
-// Events
-PUSH EnableClient
+FUNCTION SocketOpen()
 {
-    SIGNED_INTEGER status;
+ 	SIGNED_INTEGER status;
 
     status = SocketConnectClient (MyClient, ClientIPAddress, ClientPortNumber, AutoReconnect);
     if (status < 0)
@@ -74,7 +73,7 @@ PUSH EnableClient
     }
 }
 
-RELEASE EnableClient
+FUNCTION SocketClose()
 {
     SIGNED_INTEGER status;
 
@@ -84,6 +83,18 @@ RELEASE EnableClient
     	MakeString(DebugString, "Error disconnecting socket to address %s on port  %d", ClientIPAddress, ClientPortNumber);
 		SendDebug();
     }
+
+}
+
+// Events
+PUSH EnableClient
+{
+    SocketOpen();
+}
+
+RELEASE EnableClient
+{
+    SocketClose();
 }
 
 SOCKETCONNECT MyClient
@@ -179,12 +190,22 @@ CHANGE ClientTx
  
 CHANGE ClientPortNumberInput
 {
+	SocketClose();
  	ClientPortNumber = ClientPortNumberInput;
+	if(EnableClient)
+	{
+		SocketOpen();
+	}
 }
 
 CHANGE ClientIPAddressInput
 {
+	SocketClose();
  	ClientIPAddress = ClientIPAddressInput;
+	if(EnableClient)
+	{
+    	SocketOpen();
+	}	
 }
 
 
