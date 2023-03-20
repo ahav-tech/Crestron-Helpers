@@ -3,5 +3,14 @@ SPlsWork/
 ~$*
 _temp/
 .DS_Store
-*_bak.gcpro
-*_bak.gcplus
+
+# Compiled files, comment out when archiving
+# *.vtz
+# *.hash
+# *_archive.zip
+# *_compiled.zip
+# ProjDabs.mdb
+# *.lpz
+# *.sig
+# *.sm2
+# *.smft

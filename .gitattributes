@@ -1,9 +1,14 @@
-*.smw binary
-*.vtp binary
-*.src binary
-*.tkn binary
-*.tko binary
-*.tp4 binary
-*.tp5 binary
-*.gcplus binary
-*.gcpro binary
+* -text
+*.md text=auto
+*.smw text=auto eol=crlf
+*.sm2 text=auto eol=crlf
+*.smft text=auto eol=crlf
+*.umc text=auto eol=crlf
+*.um2 text=auto eol=crlf
+*.ush text=auto eol=crlf
+*.usp text=auto eol=crlf
+*.usl text=auto eol=crlf
+*.hash text=auto eol=crlf
+*.sgd text=auto eol=crlf
+*.sgd_ text=auto eol=crlf
+*.ced text=auto eol=crlf
